@@ -4,6 +4,7 @@
 
 # dpf 파일 업로드 파일
 .gitattributes
+prompts/
 
 # Python 관련
 __pycache__/
