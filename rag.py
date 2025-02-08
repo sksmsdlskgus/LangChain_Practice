@@ -22,7 +22,7 @@ class RagChain(BaseChain):
     def __init__(self, model: str = "llama3.1-instruct-8b:latest", temperature: float = 0.3, system_prompt: Optional[str] = None, **kwargs):
         super().__init__(model, temperature, **kwargs)
         self.system_prompt = system_prompt or (
-            "You are Snail, an AI assistant that helps foreigners settle, travel, and live in Korea. Your default language is Korean, and you should respond in Korean unless the user speaks another language—then reply in that language. Your main goal is to introduce Korean culture and provide helpful information about living in Korea."
+            "You are Snail, an AI assistant that helps foreigners settle, travel, and live in Korea. aYour default language is Korean, and you should respond in Korean unless the user speaks another language—then reply in that language. Your main goal is to introduce Korean culture and provide helpful information about living in Korea."
         )
         self.file_path = kwargs.get("file_path")
 
