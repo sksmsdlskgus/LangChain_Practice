@@ -1,0 +1,13 @@
+# 환경 변수 파일
+.env
+
+# Python 관련
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ollama 모델 파일 폴더
+ollama-modelfile/
+
+# 운영체제 관련 파일
