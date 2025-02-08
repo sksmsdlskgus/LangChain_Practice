@@ -1,0 +1,36 @@
+# FastAPI - Python 기반의 고성능 웹 프레임워크 (비동기 지원)
+fastapi  
+
+# Uvicorn - FastAPI와 함께 사용되는 ASGI 서버 (초고속 비동기 서버)
+uvicorn[standard] 
+
+# Pydantic - 데이터 검증 및 설정 관리를 위한 라이브러리 (FastAPI와 함께 사용)
+pydantic  
+
+# FastAPI[all] - FastAPI의 모든 확장 기능 포함 (OAuth, GraphQL 등 추가 기능 제공)
+fastapi[all]  
+
+# LangChain - LLM (Large Language Model)과의 상호작용을 쉽게 구현할 수 있는 프레임워크
+langchain  
+
+# LangChain-Core - LangChain의 핵심 기능만 제공하는 경량화된 모듈
+langchain-core  
+
+# LangChain-Community - LangChain의 커뮤니티 기반 추가 기능
+langchain-community  
+
+# LangServe - LangChain을 FastAPI 기반으로 배포하기 위한 서버 도구
+langserve  
+
+# SSE-Starlette - 스트리밍 API를 처리하는 데 필요한 라이브러리 (Server-Sent Events)
+# FastAPI에서 실시간 데이터 스트리밍을 처리하는 데 사용, 이벤트 소스를 통해 데이터를 실시간으로 클라이언트에 전달
+sse_starlette
+
+# PyPDF2 - PDF 파일 처리 및 텍스트 추출을 위한 라이브러리
+PyPDF2
+
+# pdfplumber - PDF 파일을 파싱하고 텍스트를 추출하기 위한 라이브러리
+pdfplumber
+
+# ChromaDB - 벡터 데이터베이스, 텍스트 임베딩을 저장하고 유사 항목을 검색하는 데 사용
+chromadb
