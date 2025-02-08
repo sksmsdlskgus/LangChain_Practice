@@ -44,6 +44,7 @@ async def run_rag_chain():
     result = chain.invoke({"question": "질문을 여기에 입력"})
     return JSONResponse(content={"message": "RAG chain is set up successfully", "result": result})
 
+
 # LLM 모델과 관련된 경로 추가
 add_routes(app, model, path="/llm")
 
@@ -56,16 +57,27 @@ class InputChat(BaseModel):
         ...,
         description="The chat messages representing the current conversation.",
     )
+    
+@app.post("/chat")
+async def chat(input: InputChat):
+    try:
+        # chat_chain.invoke() 메서드를 사용하기 전에 chain 타입과 입력이 올바른지 확인
+        result = chat_chain.invoke(input.messages)
+        return JSONResponse(content={"message": "Chat response", "result": result})
+    except Exception as e:
+        return JSONResponse(content={"error": str(e)}, status_code=500)
 
 # 대화형 채팅 엔드포인트 설정
+# 두 번째 add_routes 호출을 제거하고, 한 번만 사용합니다.
 add_routes(
     app,
     chat_chain.with_types(input_type=InputChat),
-    path="/chat",
+    path="/chat",  # 이미 /chat 경로에서 채팅 엔드포인트를 처리하므로 중복 방지
     enable_feedback_endpoint=True,
     enable_public_trace_link_endpoint=True,
     playground_type="chat",
 )
+
 
 # 서버 실행 설정
 if __name__ == "__main__":
