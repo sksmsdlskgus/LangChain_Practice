@@ -16,3 +16,4 @@ __pycache__/
 ollama-modelfile/
 
 # 운영체제 관련 파일
+vectorstore/
