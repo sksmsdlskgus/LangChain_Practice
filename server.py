@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -38,15 +38,20 @@ async def playground():
     return {"message": "Welcome to the Playground!"}
 
 # RAG 체인 추가
+class RagRequest(BaseModel): # 입력 데이터 파일 경로와 질문
+    file_path: str
+    question: str
+
 @app.post("/rag")
-async def run_rag_chain():
-    chain = RagChain(file_path="data/06+통계프리즘2s.pdf").create()
-    result = chain.invoke({"question": "질문을 여기에 입력"})
-    return JSONResponse(content={"message": "RAG chain is set up successfully", "result": result})
-
-
-# LLM 모델과 관련된 경로 추가
-add_routes(app, model, path="/llm")
+async def run_rag_chain(request: RagRequest):
+    file_path = request.file_path
+    question = request.question
+    try:
+        rag_chain = RagChain(file_path=file_path)
+        result = rag_chain.get_answer(question)
+        return JSONResponse(content={"message": "RAG chain is set up successfully", "result": result})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 ########### 대화형 인터페이스 ###########
 
@@ -68,11 +73,11 @@ async def chat(input: InputChat):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
 # 대화형 채팅 엔드포인트 설정
-# 두 번째 add_routes 호출을 제거하고, 한 번만 사용합니다.
+
 add_routes(
     app,
     chat_chain.with_types(input_type=InputChat),
-    path="/chat",  # 이미 /chat 경로에서 채팅 엔드포인트를 처리하므로 중복 방지
+    path="/chat",
     enable_feedback_endpoint=True,
     enable_public_trace_link_endpoint=True,
     playground_type="chat",
