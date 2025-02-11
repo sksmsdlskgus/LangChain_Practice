@@ -1,11 +1,9 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import uvicorn
-from typing import List, Union
 from pydantic import BaseModel, Field
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langserve import add_routes
 # from rag import RagChain
 from chat import chain as chat_chain
@@ -24,6 +22,9 @@ load_dotenv()
 app = FastAPI()
 
 # Tesseract OCR 경로 설정
+# Azure App Service에서 Docker 컨테이너를 사용
+# Docker에서 설치된 Tesseract 경로로 변환해야함. 
+# Dockerfile을 작성하여 Tesseract와 의존성을 설치하고, Azure App Service에 배포.
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 # CORS 미들웨어 설정
@@ -64,7 +65,6 @@ class RagRequest(BaseModel): # 입력 데이터 파일 경로와 질문
 
 ########### 대화형 인터페이스 ###########
 
-    
 class InputChat(BaseModel):
     messages: list[str]
 
