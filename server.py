@@ -48,9 +48,9 @@ async def playground():
     return {"message": "Welcome to the Playground!"}
 
 # RAG 체인 추가
-class RagRequest(BaseModel): # 입력 데이터 파일 경로와 질문
-    file_path: str
-    question: str
+# class RagRequest(BaseModel): # 입력 데이터 파일 경로와 질문
+#     file_path: str
+#     question: str
 
 # @app.post("/rag")
 # async def run_rag_chain(request: RagRequest):
@@ -92,6 +92,7 @@ async def chat(input: str = Form(...), file: Optional[UploadFile] = File(None)):
     
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+    
     
 # 대화형 채팅 엔드포인트 설정
 
