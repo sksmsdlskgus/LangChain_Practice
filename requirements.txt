@@ -30,7 +30,10 @@ sse_starlette
 PyPDF2
 pypdf
 
+# Tesseract OCR - 이미지에서 텍스트를 추출하는 라이브러리
 pytesseract
+# Pillow - 이미지를 다루는 라이브러리
+pillow
 
 # pdfplumber - PDF 파일을 파싱하고 텍스트를 추출하기 위한 라이브러리
 pdfplumber
