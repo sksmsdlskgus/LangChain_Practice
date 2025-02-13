@@ -62,21 +62,6 @@ async def redirect_root_to_docs():
 async def playground():
     return {"message": "Welcome to the Playground!"}
 
-# RAG 체인 추가
-# class RagRequest(BaseModel): # 입력 데이터 파일 경로와 질문
-#     file_path: str
-#     question: str
-
-# @app.post("/rag")
-# async def run_rag_chain(request: RagRequest):
-#     file_path = request.file_path
-#     question = request.question
-#     try:
-#         rag_chain = RagChain(file_path=file_path)
-#         result = rag_chain.get_answer(question)
-#         return JSONResponse(content={"message": "RAG chain is set up successfully", "result": result})
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))
 
 ########### 대화형 인터페이스 ###########
 
