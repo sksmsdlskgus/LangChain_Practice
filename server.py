@@ -55,7 +55,7 @@ os.makedirs(CHROMA_DB_DIR, exist_ok=True)
 # CORS 미들웨어 설정
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # 배포시 도메인
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
