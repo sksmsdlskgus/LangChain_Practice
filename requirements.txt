@@ -41,6 +41,7 @@ pdfplumber
 
 # ChromaDB - 벡터 데이터베이스, 텍스트 임베딩을 저장하고 유사 항목을 검색하는 데 사용
 chromadb
+langchain-chroma
 
 # Ollama
 langchain-ollama
