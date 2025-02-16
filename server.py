@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Depends
 from fastapi.responses import RedirectResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -17,6 +17,14 @@ from langchain_ollama import OllamaEmbeddings
 from langchain.schema import Document
 import uuid 
 import logging
+import datetime
+
+
+# 환경 설정 파일 로딩
+load_dotenv()
+
+# FastAPI 애플리케이션 객체 초기화
+app = FastAPI()
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -24,11 +32,11 @@ logger = logging.getLogger(__name__)
 
 logger.info("서버가 시작되었습니다!")
 
-# 환경 설정 파일 로딩
-load_dotenv()
+# 글로벌 변수로 벡터 DB 객체 선언 (싱글턴 패턴으로 관리)
+vector_db = None
 
-# FastAPI 애플리케이션 객체 초기화
-app = FastAPI()
+# 현재 시간 가져오기
+timestamp = datetime.datetime.now().isoformat()  # ISO 형식으로 날짜 및 시간 반환
 
 # Tesseract OCR 경로 설정
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
@@ -64,37 +72,51 @@ async def playground():
     return {"message": "Welcome to the Playground!"}
 
 ########### 대화형 인터페이스 ###########
+# 벡터 DB 초기화 함수 (한 번만 실행)
+def get_vector_db():
+    global vector_db
+    if vector_db is None:
+        vector_db = Chroma(embedding_function=embeddings, persist_directory=CHROMA_DB_DIR)
+        logger.info("벡터 DB 연결 완료")
+    return vector_db
 
 # 벡터 DB 저장 함수
-def save_to_vector_db(messages, document_type):
+def save_to_vector_db(messages, document_type, conversation_id, vector_db):
     try:
-        # Chroma DB 클라이언트 연결 (한 번만 생성)
-        vector_db = Chroma(embedding_function=embeddings, persist_directory=CHROMA_DB_DIR)
+        # 벡터 DB 객체 가져오기 (get_vector_db 호출)
+        vector_db = get_vector_db()
         
-        # 메시지에 고유 ID 추가 및 벡터화 처리
-        combined_text = " ".join(messages)
-        vectors = embeddings.embed_documents([combined_text])
+        # 각 메시지별로 벡터화 및 저장
+        for message in messages:
+            vectors = embeddings.embed_documents([message])
 
-        # 고유 ID 생성 (UUID 사용)
-        doc_id = str(uuid.uuid4())  # UUID를 사용하여 고유 ID 생성
-        
-        # 메타데이터 추가 (문서 타입과 출처 등)
-        metadata = {
-            "id": doc_id,
-            "type": document_type,  # 'message', 'pdf', 'web'
-            "source": "user_input"  # 예시로, source를 사용자 입력으로 설정
-        }
-        
-        # Document 객체 생성
-        document = Document(page_content=combined_text, metadata=metadata)
-        
-        # 벡터 DB에 문서 추가
-        vector_db.add_documents(
-            documents=[document],  # Document 객체 전달
-            embeddings=vectors,
-            ids=[doc_id]  # 고유 ID 전달
-        )
-        
+            # 고유 ID 생성 (UUID 사용)
+            doc_id = str(uuid.uuid4())  # UUID를 사용하여 고유 ID 생성
+
+            # 메타데이터 추가
+            metadata = {
+                "id": doc_id,
+                "type": document_type,  # 'message', 'pdf', 'web'
+                "source": "user_input",
+                "conversation_id": conversation_id,  # 대화 ID 추가
+                "timestamp": datetime.datetime.now().isoformat()
+            }
+
+            # Document 객체 생성
+            document = Document(page_content=message, metadata=metadata)
+
+            # 벡터 DB에 문서 추가
+            vector_db.add_documents(
+                documents=[document],  # Document 객체 전달
+                embeddings=vectors,
+                ids=[doc_id]  # 고유 ID 전달
+            )
+            
+            logger.info(f"Document saved: {doc_id}, Message: {message}") # 실행된 고유id와 메시지 출력
+            
+            documents = vector_db.get()
+            logger.info(f"전체 조회: {documents}") # 벡터 db에 저장된 전체 메시지 정보 출력
+
         logger.info("벡터 DB에 메시지 저장 성공")
     except Exception as e:
         logger.error(f"벡터 DB 저장 중 오류 발생: {e}")
@@ -105,30 +127,33 @@ class InputChat(BaseModel):
 
 # 대화형 API 엔드포인트
 @app.post("/chat")
-async def chat(input: str = Form(...), file: Optional[UploadFile] = File(None), document_type: str = "message"):
+async def chat(input: str = Form(...), file: Optional[UploadFile] = File(None),  document_type: str = "message", vector_db: Chroma = Depends(get_vector_db)):
+    # vector_db는 이제 Chroma 객체로 자동 주입됨
     try:
-        # JSON 문자열을 InputChat 모델로 파싱
         input_data = InputChat(**json.loads(input))
         result = {}
 
-        # 이미지가 업로드된 경우 OCR 수행
+        # 대화 ID 생성
+        conversation_id = str(uuid.uuid4())
+
+        # 이미지가 업로드된 경우 OCR 처리
         if file:
             image = Image.open(io.BytesIO(await file.read()))
             ocr_text = pytesseract.image_to_string(image, lang="kor+eng")
             input_data.messages.append(ocr_text)
-            result["ocr_text"] = ocr_text  # OCR 텍스트 결과 추가
-        
+            result["ocr_text"] = ocr_text
+
         # 챗봇 응답 생성
         result["chatbot_response"] = chat_chain.invoke(input_data.messages)
-        
-        # 메시지와 OCR 텍스트를 벡터 DB에 저장
-        save_to_vector_db(input_data.messages, document_type)  # document_type을 함수에 전달
-        
-        # 최종 응답 반환
+
+        # 벡터 DB에 메시지 저장
+        save_to_vector_db(input_data.messages, document_type, conversation_id, vector_db)
+
         return JSONResponse(content={"message": "Chat response", "type": document_type, "result": result, "input_messages": input_data.messages})
-    
+
     except Exception as e:
         return JSONResponse(content={"error": str(e)}, status_code=500)
+
 
 # 대화형 채팅 엔드포인트 설정
 add_routes(
