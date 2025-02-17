@@ -309,5 +309,5 @@ add_routes(
 
 # 서버 실행 설정
 if __name__ == "__main__":
-    fetch_data_prec(),fetch_data_law()
+    fetch_data_prec(),fetch_data_law(),fetch_data_ordin()
     uvicorn.run(app, host="0.0.0.0", port=8000)
