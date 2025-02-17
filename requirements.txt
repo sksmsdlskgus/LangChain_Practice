@@ -49,6 +49,9 @@ langchain-ollama
 # Pandas - 데이터 처리 및 분석을 위한 라이브러리
 pandas
 
+# openpyxl - pandas 엑셀 저장을 위한 라이브러리
+openpyxl
+
 # BeautifulSoup4 - HTML 및 XML 문서를 파싱하기 위한 라이브러리
 beautifulsoup4
 
@@ -57,3 +60,6 @@ lxml
 
 # 크롤링 - JavaScript로 동작하는 버튼들을 클릭하고, 페이지 전환을 처리
 selenium
+
+# py스케줄러 - 백그라운드 작업을 예약하고 실행할 수 있게 해주는 라이브러리
+apscheduler
