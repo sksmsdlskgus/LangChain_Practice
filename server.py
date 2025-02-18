@@ -18,11 +18,9 @@ from langchain.schema import Document
 import uuid 
 import logging
 import datetime
-import time
 import xml.etree.ElementTree as ET
 import pandas as pd
 import requests
-from tqdm import tqdm
 from apscheduler.schedulers.background import BackgroundScheduler
 
 
@@ -88,7 +86,7 @@ def fetch_data_generic(target_type, keywords):
             url = f"{base_url}&page={page}"
             response = requests.get(url)
             xtree = ET.fromstring(response.text)
-            # target_type에 따라 인덱스 다르게 설정 - 데이터 추출 부분분
+            # target_type에 따라 인덱스 다르게 설정 - 데이터 추출 부분
             if target_type == "prec":
                 items = xtree[5:]  # 판례는 5
             else:
@@ -192,7 +190,15 @@ def fetch_data_ordin():
     df = pd.DataFrame(rows)
     df.to_excel(os.path.join(PDF_DIR, "조례,규칙.xlsx"), index=False)
 
-    
+# 30분 마다 스케줄러 생성 
+scheduler = BackgroundScheduler()
+
+def fetch_all_data():
+    fetch_data_prec()
+    fetch_data_law()
+    fetch_data_ordin()
+
+scheduler.add_job(fetch_all_data, trigger='interval', minutes=30)
 
 # CORS 미들웨어 설정
 app.add_middleware(
@@ -309,5 +315,12 @@ add_routes(
 
 # 서버 실행 설정
 if __name__ == "__main__":
-#    fetch_data_prec(),fetch_data_law(),fetch_data_ordin()
+    scheduler.start()
+
+    # 데이터 가져오는 함수 실행
+    fetch_data_prec()
+    fetch_data_law()
+    fetch_data_ordin()
+
+    # FastAPI 서버 실행
     uvicorn.run(app, host="0.0.0.0", port=8000)
