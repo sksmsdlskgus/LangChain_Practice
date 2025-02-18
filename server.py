@@ -22,6 +22,11 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
+from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader
+import concurrent.futures
+
 
 
 # 환경 설정 파일 로딩
@@ -58,7 +63,8 @@ if os.path.exists(CHROMA_DB_DIR):
 os.makedirs(CHROMA_DB_DIR, exist_ok=True)
 os.makedirs(PDF_DIR, exist_ok=True)
 
-# 국가법령정보 조례,법령,판례 엑셀 저장
+###################################################### 국가법령정보 조례,법령,판례 엑셀 저장
+
 def fetch_data_generic(target_type, keywords):
     print(f"{target_type} 데이터 수집 시작...")
 
@@ -189,16 +195,104 @@ def fetch_data_ordin():
     rows = fetch_data_generic("ordin", ["외국인", "다문화"])
     df = pd.DataFrame(rows)
     df.to_excel(os.path.join(PDF_DIR, "조례,규칙.xlsx"), index=False)
+    
+    
+####################################### PDF 파일에서 텍스트 추출 
 
-# 30분 마다 스케줄러 생성 
+def extract_text_from_pdf(pdf_path):
+    try:
+        loader = PyPDFLoader(pdf_path)  # PyPDFLoader로 PDF 로드
+        pages = loader.load()  # 페이지 단위로 로드된 문서
+        text = ""
+        for page in pages:
+            text += page.page_content  # 각 페이지의 내용 합치기
+    except Exception as e:
+        logger.error(f"PDF 텍스트 추출 실패: {pdf_path}, 오류: {e}")
+        text = ""
+    return text
+
+# 엑셀 파일에서 텍스트 추출 (모든 시트 포함)
+def extract_text_from_excel(excel_path):
+    text = ""
+    try:
+        xls = pd.ExcelFile(excel_path)
+        for sheet_name in xls.sheet_names:
+            df = pd.read_excel(xls, sheet_name=sheet_name, dtype=str)  # 모든 시트를 문자열로 변환
+            text += df.to_string(index=False, header=False) + "\n"
+    except Exception as e:
+        logger.error(f"엑셀 텍스트 추출 실패: {excel_path}, 오류: {e}")
+    return text
+
+# PDF/Excel 파일을 벡터 DB에 저장 
+def save_files_to_vector_db():
+    try:
+        vector_db = get_vector_db()  # 벡터 DB 인스턴스 가져오기
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=300, chunk_overlap=50)  # 청크 분할 설정
+
+        for file_name in os.listdir(PDF_DIR):
+            file_path = os.path.join(PDF_DIR, file_name)
+            text = ""
+            document_type = None  # 문서 타입 초기화
+
+            # 파일 확장자 확인 후 텍스트 추출 및 문서 타입 설정
+            if file_name.endswith(".pdf"):
+                text = extract_text_from_pdf(file_path)
+                document_type = "pdf"
+            elif file_name.endswith(".xls") or file_name.endswith(".xlsx"):
+                text = extract_text_from_excel(file_path)
+                document_type = "excel"
+            else:
+                logger.warning(f"지원하지 않는 파일 형식: {file_name}")
+                continue
+
+            # 파일에 타입이 설정되지 않으면 skip
+            if not document_type:
+                logger.warning(f"파일 타입을 알 수 없습니다: {file_name}")
+                continue
+
+            # 청크 단위로 분할
+            text_chunks = text_splitter.split_text(text)
+
+            # 각 청크를 벡터화 및 저장
+            for chunk in text_chunks:
+                vectors = embeddings.embed_documents([chunk])  # 임베딩 생성
+                doc_id = str(uuid.uuid4())  # 고유 ID 생성
+
+                metadata = {
+                    "id": doc_id,
+                    "type": document_type,  # 'pdf', 'excel'
+                    "source": file_name,  # 파일명 저장
+                    "timestamp": datetime.datetime.now().isoformat()
+                }
+
+                document = Document(page_content=chunk, metadata=metadata)
+
+                # 벡터 DB에 저장
+                vector_db.add_documents(documents=[document], embeddings=vectors, ids=[doc_id])
+
+                logger.info(f"Document saved: {doc_id}, Source: {file_name}")
+                
+                # documents = vector_db.get()
+                # logger.info(f"전체 조회: {documents}")  # 벡터 db에 저장된 전체 정보 출력
+
+        logger.info("벡터 DB에 문서 저장 완료")
+    except Exception as e:
+        logger.error(f"벡터 DB 저장 중 오류 발생: {e}") 
+        
+
+##################################### 30분 마다 스케줄러 생성 
 scheduler = BackgroundScheduler()
 
 def fetch_all_data():
-    fetch_data_prec()
-    fetch_data_law()
-    fetch_data_ordin()
+    # fetch_data_prec()
+    # fetch_data_law()
+    # fetch_data_ordin()
+     # fetch_all_data가 완료된 후에 save_files_to_vector_db 호출
+    save_files_to_vector_db()
 
-scheduler.add_job(fetch_all_data, trigger='interval', minutes=30)
+# 국가법령정보 엑셀 업데이트
+scheduler.add_job(fetch_all_data, trigger='interval', hours=24)
+
 
 # CORS 미들웨어 설정
 app.add_middleware(
@@ -228,7 +322,7 @@ def get_vector_db():
         logger.info("벡터 DB 연결 완료")
     return vector_db
 
-# 벡터 DB 저장 함수
+# 벡터 DB 메시지 저장 함수
 def save_to_vector_db(messages, document_type, conversation_id, vector_db):
     try:
         # 벡터 DB 객체 가져오기 (get_vector_db 호출)
@@ -260,10 +354,10 @@ def save_to_vector_db(messages, document_type, conversation_id, vector_db):
                 ids=[doc_id]  # 고유 ID 전달
             )
             
-            logger.info(f"Document saved: {doc_id}, Message: {message}") # 실행된 고유id와 메시지 출력
+            logger.info(f"Message saved: {doc_id}, Message: {message}") # 실행된 고유id와 메시지 출력
             
             documents = vector_db.get()
-            logger.info(f"전체 조회: {documents}") # 벡터 db에 저장된 전체 메시지 정보 출력
+            logger.info(f"전체 조회: {documents}") # 벡터 db에 저장된 전체 정보 출력
 
         logger.info("벡터 DB에 메시지 저장 성공")
     except Exception as e:
@@ -318,9 +412,7 @@ if __name__ == "__main__":
     scheduler.start()
 
     # 데이터 가져오는 함수 실행
-    fetch_data_prec()
-    fetch_data_law()
-    fetch_data_ordin()
+    fetch_all_data()
 
     # FastAPI 서버 실행
     uvicorn.run(app, host="0.0.0.0", port=8000)
