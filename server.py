@@ -5,6 +5,7 @@ import uvicorn
 from pydantic import BaseModel
 from langserve import add_routes
 from chat import chain as chat_chain
+from chat import llm
 from dotenv import load_dotenv
 from typing import Optional
 from PIL import Image
@@ -25,7 +26,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-from chat import retriever, get_vector_db
+from langchain.chains.retrieval_qa.base import RetrievalQA
 
 
 # 환경 설정 파일 로딩
@@ -39,9 +40,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 logger.info("서버가 시작되었습니다!")
-
-# 글로벌 변수로 벡터 DB 객체 선언 (싱글턴 패턴으로 관리)
-vector_db = None
 
 # 현재 시간 가져오기
 timestamp = datetime.datetime.now().isoformat()  # ISO 형식으로 날짜 및 시간 반환
@@ -320,6 +318,21 @@ def get_vector_db():
         vector_db = Chroma(embedding_function=embeddings, persist_directory=CHROMA_DB_DIR)
         logger.info("벡터 DB 연결 완료")
     return vector_db
+
+# 글로벌 변수로 벡터 DB 객체 선언 (싱글턴 패턴으로 관리)
+vector_db = None
+
+# 벡터 DB를 가져오고 retriever 및 qa_chain 설정
+vector_db = get_vector_db()
+retriever = vector_db.as_retriever()
+
+# 검색 기반 QA 체인 (벡터 DB 활용)
+qa_chain = RetrievalQA.from_chain_type(
+    llm=llm, 
+    chain_type="map_reduce", 
+    retriever=retriever,
+    return_source_documents=True
+)
 
 # 벡터 DB 메시지 저장 함수
 def save_to_vector_db(messages, document_type, conversation_id, vector_db):
