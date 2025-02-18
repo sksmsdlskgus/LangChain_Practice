@@ -2,18 +2,6 @@ from langchain_ollama import ChatOllama
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
-from langchain.chains.retrieval_qa.base import RetrievalQA
-
-# Chroma 벡터 DB 설정
-CHROMA_DB_DIR = "vectorstore"
-embeddings = OllamaEmbeddings(model="llama3.1-instruct-8b:latest")
-vector_db = Chroma(embedding_function=embeddings, persist_directory=CHROMA_DB_DIR)
-
-# 벡터 검색기 생성
-retriever = vector_db.as_retriever()
-
 # LLM 모델 초기화
 llm = ChatOllama(model="llama3.1-instruct-8b:latest")
 
@@ -34,15 +22,3 @@ prompt = ChatPromptTemplate.from_messages(
 
 # 체인 생성
 chain = prompt | llm | StrOutputParser()
-
-# 검색 기반 QA 체인 (벡터 DB 활용)
-qa_chain = RetrievalQA.from_chain_type(
-    llm=llm, 
-    chain_type="map_reduce", 
-    retriever=retriever,
-    return_source_documents=True
-)
-
-# FastAPI에서 의존성 주입을 위한 함수
-def get_vector_db():
-    return vector_db
