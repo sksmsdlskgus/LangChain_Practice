@@ -25,8 +25,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import PyPDFLoader
-import concurrent.futures
-
+from chat import retriever, get_vector_db
 
 
 # 환경 설정 파일 로딩
@@ -56,9 +55,9 @@ PDF_DIR = "pdfs"
 embeddings = OllamaEmbeddings(model="llama3.1-instruct-8b:latest")
 
 # 기존 DB 디렉토리 삭제
-if os.path.exists(CHROMA_DB_DIR):
-    import shutil
-    shutil.rmtree(CHROMA_DB_DIR)  # 디렉토리 및 그 안의 내용 모두 삭제
+#if os.path.exists(CHROMA_DB_DIR):
+#    import shutil
+#    shutil.rmtree(CHROMA_DB_DIR)  # 디렉토리 및 그 안의 내용 모두 삭제
     
 os.makedirs(CHROMA_DB_DIR, exist_ok=True)
 os.makedirs(PDF_DIR, exist_ok=True)
@@ -384,9 +383,20 @@ async def chat(input: str = Form(...), file: Optional[UploadFile] = File(None), 
             ocr_text = pytesseract.image_to_string(image, lang="kor+eng")
             input_data.messages.append(ocr_text)
             result["ocr_text"] = ocr_text
+            
+        # 벡터 DB에서 관련 문서 검색
+        query = input_data.messages[-1]  # 최신 메시지 사용
+        docs = retriever.invoke(query)
+
+        # 검색된 문서를 LLM 입력에 추가
+        context = "\n\n".join([doc.page_content for doc in docs]) if docs else "관련 정보 없음"
+        input_data.messages.append(f"🔍 참고 정보:\n{context}")
 
         # 챗봇 응답 생성
-        result["chatbot_response"] = chat_chain.invoke(input_data.messages)
+        result["chatbot_response"] = chat_chain.invoke(input_data.messages)    
+        
+        # 챗봇 응답 생성
+        # result["chatbot_response"] = chat_chain.invoke(input_data.messages)
 
         # 벡터 DB에 메시지 저장
         save_to_vector_db(input_data.messages, document_type, conversation_id, vector_db)
@@ -412,7 +422,7 @@ if __name__ == "__main__":
     scheduler.start()
 
     # 데이터 가져오는 함수 실행
-    fetch_all_data()
+    # fetch_all_data()
 
     # FastAPI 서버 실행
     uvicorn.run(app, host="0.0.0.0", port=8000)
