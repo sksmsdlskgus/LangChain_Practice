@@ -281,9 +281,10 @@ def save_files_to_vector_db():
 scheduler = BackgroundScheduler()
 
 def fetch_all_data():
-    # fetch_data_prec()
-    # fetch_data_law()
-    # fetch_data_ordin()
+    fetch_data_prec()
+    fetch_data_law()
+    fetch_data_ordin()
+    
      # fetch_all_data가 완료된 후에 save_files_to_vector_db 호출
     save_files_to_vector_db()
 
@@ -397,19 +398,19 @@ async def chat(input: str = Form(...), file: Optional[UploadFile] = File(None), 
             input_data.messages.append(ocr_text)
             result["ocr_text"] = ocr_text
             
-        # 벡터 DB에서 관련 문서 검색
-        query = input_data.messages[-1]  # 최신 메시지 사용
-        docs = retriever.invoke(query)
+        # # 벡터 DB에서 관련 문서 검색
+        # query = input_data.messages[-1]  # 최신 메시지 사용
+        # docs = retriever.invoke(query)
 
-        # 검색된 문서를 LLM 입력에 추가
-        context = "\n\n".join([doc.page_content for doc in docs]) if docs else "관련 정보 없음"
-        input_data.messages.append(f"🔍 참고 정보:\n{context}")
+        # # 검색된 문서를 LLM 입력에 추가
+        # context = "\n\n".join([doc.page_content for doc in docs]) if docs else "관련 정보 없음"
+        # input_data.messages.append(f"🔍 참고 정보:\n{context}")
 
-        # 챗봇 응답 생성
-        result["chatbot_response"] = chat_chain.invoke(input_data.messages)    
+        # # 챗봇 응답 생성
+        # result["chatbot_response"] = chat_chain.invoke(input_data.messages)    
         
-        # 챗봇 응답 생성
-        # result["chatbot_response"] = chat_chain.invoke(input_data.messages)
+        # 챗봇 응답만 생성 프롬프팅 Test
+        result["chatbot_response"] = chat_chain.invoke(input_data.messages)
 
         # 벡터 DB에 메시지 저장
         save_to_vector_db(input_data.messages, document_type, conversation_id, vector_db)
