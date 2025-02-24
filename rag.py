@@ -20,14 +20,7 @@ logger = logging.getLogger(__name__)
 CHROMA_DB_DIR = "vectorstore"
 PDF_DIR = "pdfs"
 embeddings = OllamaEmbeddings(model="llama3.1-instruct-8b:latest")
-
-# 기존 DB 디렉토리 삭제
-#if os.path.exists(CHROMA_DB_DIR):
-#    import shutil
-#    shutil.rmtree(CHROMA_DB_DIR)  # 디렉토리 및 그 안의 내용 모두 삭제
     
-os.makedirs(CHROMA_DB_DIR, exist_ok=True)
-os.makedirs(PDF_DIR, exist_ok=True)
 
 # 벡터 DB 초기화 함수 (한 번만 실행)
 def get_vector_db():
