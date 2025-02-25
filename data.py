@@ -3,10 +3,18 @@ import xml.etree.ElementTree as ET
 import pandas as pd
 import requests
 import logging
+from dotenv import load_dotenv
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+
+# .env 파일 강제 로드
+load_dotenv(verbose=True)
+
+# 환경 변수 가져오기
+pdf_api_key = os.getenv("PDF_API_KEY")
 
 PDF_DIR = "pdfs"
 os.makedirs(PDF_DIR, exist_ok=True)
@@ -14,9 +22,9 @@ os.makedirs(PDF_DIR, exist_ok=True)
 ###################################################### 국가법령정보 조례,법령,판례 엑셀 저장
 
 def fetch_data_generic(target_type, keywords):
-    print(f"{target_type} 데이터 수집 시작...")
+    logger.info(f"{target_type} 데이터 수집 시작...")
 
-    id = "lnh28862331"
+    id = "pdf_api_key"
     rows = []
 
     for keyword in keywords:
