@@ -5,7 +5,6 @@ import uvicorn
 from pydantic import BaseModel
 from langserve import add_routes
 from chat import chain as chat_chain
-from chat import llm
 from dotenv import load_dotenv
 from typing import Optional
 from PIL import Image
@@ -15,18 +14,10 @@ import io
 import os
 from langchain_chroma import Chroma  # 최신 패키지로 임포트
 from langchain_ollama import OllamaEmbeddings
-from langchain.schema import Document
 import uuid 
 import logging
 import datetime
-import xml.etree.ElementTree as ET
-import pandas as pd
-import requests
 from apscheduler.schedulers.background import BackgroundScheduler
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.chains.retrieval_qa.base import RetrievalQA
 from data import fetch_data_prec,fetch_data_law,fetch_data_ordin
 from rag import save_files_to_vector_db,save_to_vector_db,get_vector_db
 
